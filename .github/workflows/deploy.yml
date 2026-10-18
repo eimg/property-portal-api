@@ -1,0 +1,43 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Configure deployment SSH
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: bash .github/configure-ssh.sh
+      - name: Upload and deploy API
+        run: |
+          archive="/tmp/property-api-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.tar.gz"
+          git archive --format=tar.gz HEAD > "$RUNNER_TEMP/api.tar.gz"
+          scp "$RUNNER_TEMP/api.tar.gz" "property-demo:$archive"
+          ssh property-demo "bash -s -- '$archive'" < .github/deploy.sh
+      - name: Check public API
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          curl --fail --silent --show-error --max-time 15 "http://$DEPLOY_HOST/health"
+          curl --fail --silent --show-error --max-time 15 --output /dev/null "http://$DEPLOY_HOST/api/v1/listings"
+      - name: Remove deployment key
+        if: always()
+        run: rm -f "$HOME/.ssh/property-deploy"

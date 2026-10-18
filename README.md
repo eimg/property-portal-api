@@ -20,7 +20,13 @@ npm run db:seed
 npm run dev
 ```
 
-The development server listens on `http://localhost:4000` by default. Seed accounts and credentials are for local development only; never reuse them in a deployed environment.
+The development server listens on `http://localhost:4000` by default. Before starting it, replace `JWT_SECRET` in `.env` with a value unique to this machine. The process exits when that variable is missing or still the example placeholder `replace-this-in-development`. Generate one with:
+
+```sh
+node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64url') + '\n')"
+```
+
+Seed accounts and credentials are for local development only; never reuse them in a deployed environment.
 
 The API health check is available at `http://localhost:4000/health`. The web client uses `http://localhost:4000/api/v1` by default. Set `WEB_ORIGIN` if the browser client runs from a different origin, and `PORT` to change the server port.
 

@@ -11,7 +11,23 @@ declare global {
   }
 }
 
-const jwtSecret = () => process.env.JWT_SECRET ?? "local-development-secret";
+/** Secrets that appear in this repository. A deployment must use its own. */
+const repositoryJwtPlaceholders = new Set([
+  "local-development-secret",
+  "replace-this-in-development",
+]);
+
+export function assertJwtSecret(): string {
+  const secret = process.env.JWT_SECRET?.trim() ?? "";
+  if (secret.length === 0 || repositoryJwtPlaceholders.has(secret)) {
+    throw new Error(
+      "JWT_SECRET must be set to a secret unique to this deployment. A missing value, the built-in fallback, and the example placeholder are not accepted.",
+    );
+  }
+  return secret;
+}
+
+const jwtSecret = () => assertJwtSecret();
 
 export const hashPassword = (password: string) => bcrypt.hash(password, 12);
 export const comparePassword = (password: string, hash: string) => bcrypt.compare(password, hash);
